@@ -1,0 +1,37 @@
+# Build directory
+build/
+
+# Other common C++ artifacts
+*.o
+*.a
+*.so
+*.exe
+*.out
+*.dll
+*.lib
+*.ncb
+*.suo
+*.sdf
+*.pdb
+*.ipch/
+*.aps
+*.ilk
+*.obj
+*.log
+*.tlog
+*.pch
+*.gch
+*~
+*.swp
+*.swo
+*.user
+*.bak
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Makefile
+Testing/
