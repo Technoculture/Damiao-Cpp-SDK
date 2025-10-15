@@ -17,12 +17,12 @@ uint16_t float_to_uint(float x, float x_min, float x_max, int bits) {
     x = limit_min_max(x, x_min, x_max);
     float span = x_max - x_min;
     float data_norm = (x - x_min) / span;
-    return static_cast<uint16_t>(data_norm * ((1 << bits) - 1));
+    return static_cast<uint16_t>(data_norm * static_cast<float>((1 << bits) - 1));
 }
 
 float uint_to_float(uint16_t x, float min, float max, int bits) {
     float span = max - min;
-    float data_norm = static_cast<float>(x) / ((1 << bits) - 1);
+    float data_norm = static_cast<float>(x) / static_cast<float>((1 << bits) - 1);
     return data_norm * span + min;
 }
 

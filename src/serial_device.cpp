@@ -115,17 +115,17 @@ SerialErrorCode SerialDevice::open_device() {
     struct termios options;
     tcgetattr(file_descriptor_, &options);
 
-    cfsetispeed(&options, baud_rate_);
-    cfsetospeed(&options, baud_rate_);
+    cfsetispeed(&options, static_cast<speed_t>(baud_rate_));
+    cfsetospeed(&options, static_cast<speed_t>(baud_rate_));
 
     options.c_cflag |= (CLOCAL | CREAD);
-    options.c_cflag &= ~PARENB;
-    options.c_cflag &= ~CSTOPB;
-    options.c_cflag &= ~CSIZE;
+    options.c_cflag &= ~static_cast<tcflag_t>(PARENB);
+    options.c_cflag &= ~static_cast<tcflag_t>(CSTOPB);
+    options.c_cflag &= ~static_cast<tcflag_t>(CSIZE);
     options.c_cflag |= CS8;
-    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    options.c_iflag &= ~(IXON | IXOFF | IXANY);
-    options.c_oflag &= ~OPOST;
+    options.c_lflag &= ~static_cast<tcflag_t>(ICANON | ECHO | ECHOE | ISIG);
+    options.c_iflag &= ~static_cast<tcflag_t>(IXON | IXOFF | IXANY);
+    options.c_oflag &= ~static_cast<tcflag_t>(OPOST);
     options.c_cc[VMIN] = 0;
     options.c_cc[VTIME] = 10; // 1 second timeout
 
@@ -150,14 +150,16 @@ int SerialDevice::read_data(uint8_t* buffer, int buffer_size) {
     if (!is_open_ || file_descriptor_ == -1) {
         return -1;
     }
-    return read(file_descriptor_, buffer, buffer_size);
+    ssize_t bytes_read = read(file_descriptor_, buffer, static_cast<size_t>(buffer_size));
+    return static_cast<int>(bytes_read);
 }
 
 int SerialDevice::write_data(const uint8_t* data, int length) {
     if (!is_open_ || file_descriptor_ == -1) {
         return -1;
     }
-    return write(file_descriptor_, data, length);
+    ssize_t bytes_written = write(file_descriptor_, data, static_cast<size_t>(length));
+    return static_cast<int>(bytes_written);
 }
 
 #endif

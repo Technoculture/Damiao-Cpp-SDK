@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < 10000; ++i) {
         auto current_time = std::chrono::high_resolution_clock::now();
         double t = std::chrono::duration<double>(current_time - start_time).count();
-        float q = std::sin(t);
+        float q = std::sin(static_cast<float>(t));
 
         motor_controller.control_pos_vel(&motor1, q * 8.0f, 30.0f);
         motor_controller.control_vel(&motor2, 8.0f * q);
