@@ -1,0 +1,4 @@
+/app/build/CMakeFiles/dm_motor_sdk.dir
+/app/build/CMakeFiles/motor_test.dir
+/app/build/CMakeFiles/edit_cache.dir
+/app/build/CMakeFiles/rebuild_cache.dir

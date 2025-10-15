@@ -55,20 +55,20 @@ ControllerErrorCode MotorController::control_mit(Motor* motor, float kp, float k
     uint16_t kp_uint = float_to_uint(kp, 0, 500, 12);
     uint16_t kd_uint = float_to_uint(kd, 0, 5, 12);
 
-    const MotorLimits& limits = LIMIT_PARAM[static_cast<int>(motor->get_motor_type())];
+    const MotorLimits& limits = LIMIT_PARAM[static_cast<size_t>(motor->get_motor_type())];
     uint16_t q_uint = float_to_uint(q, -limits.p_max, limits.p_max, 16);
     uint16_t dq_uint = float_to_uint(dq, -limits.v_max, limits.v_max, 12);
     uint16_t tau_uint = float_to_uint(tau, -limits.t_max, limits.t_max, 12);
 
     std::array<uint8_t, 8> data_buf;
-    data_buf[0] = (q_uint >> 8) & 0xff;
-    data_buf[1] = q_uint & 0xff;
-    data_buf[2] = dq_uint >> 4;
-    data_buf[3] = ((dq_uint & 0xf) << 4) | ((kp_uint >> 8) & 0xf);
-    data_buf[4] = kp_uint & 0xff;
-    data_buf[5] = kd_uint >> 4;
-    data_buf[6] = ((kd_uint & 0xf) << 4) | ((tau_uint >> 8) & 0xf);
-    data_buf[7] = tau_uint & 0xff;
+    data_buf[0] = static_cast<uint8_t>((q_uint >> 8) & 0xff);
+    data_buf[1] = static_cast<uint8_t>(q_uint & 0xff);
+    data_buf[2] = static_cast<uint8_t>(dq_uint >> 4);
+    data_buf[3] = static_cast<uint8_t>(((dq_uint & 0xf) << 4) | ((kp_uint >> 8) & 0xf));
+    data_buf[4] = static_cast<uint8_t>(kp_uint & 0xff);
+    data_buf[5] = static_cast<uint8_t>(kd_uint >> 4);
+    data_buf[6] = static_cast<uint8_t>(((kd_uint & 0xf) << 4) | ((tau_uint >> 8) & 0xf));
+    data_buf[7] = static_cast<uint8_t>(tau_uint & 0xff);
 
     send_data(motor->get_slave_id(), data_buf);
     recv();
@@ -121,10 +121,10 @@ ControllerErrorCode MotorController::control_pos_force(Motor* motor, float pos_d
     uint16_t vel_uint = static_cast<uint16_t>(vel_des);
     uint16_t i_uint = static_cast<uint16_t>(i_des);
 
-    data_buf[4] = vel_uint & 0xff;
-    data_buf[5] = vel_uint >> 8;
-    data_buf[6] = i_uint & 0xff;
-    data_buf[7] = i_uint >> 8;
+    data_buf[4] = static_cast<uint8_t>(vel_uint & 0xff);
+    data_buf[5] = static_cast<uint8_t>(vel_uint >> 8);
+    data_buf[6] = static_cast<uint8_t>(i_uint & 0xff);
+    data_buf[7] = static_cast<uint8_t>(i_uint >> 8);
 
     send_data(motor_id, data_buf);
     recv();
@@ -161,20 +161,20 @@ ControllerErrorCode MotorController::set_zero_position(Motor* motor) {
 }
 
 void MotorController::send_data(uint16_t motor_id, const std::array<uint8_t, 8>& data) {
-    send_data_frame_[13] = motor_id & 0xff;
-    send_data_frame_[14] = (motor_id >> 8) & 0xff;
+    send_data_frame_[13] = static_cast<uint8_t>(motor_id & 0xff);
+    send_data_frame_[14] = static_cast<uint8_t>((motor_id >> 8) & 0xff);
     memcpy(&send_data_frame_[21], data.data(), 8);
-    serial_device_->write_data(send_data_frame_.data(), send_data_frame_.size());
+    serial_device_->write_data(send_data_frame_.data(), static_cast<int>(send_data_frame_.size()));
 }
 
 void MotorController::recv() {
     std::array<uint8_t, 512> recv_buffer;
-    int bytes_read = serial_device_->read_data(recv_buffer.data(), recv_buffer.size());
+    int bytes_read = serial_device_->read_data(recv_buffer.data(), static_cast<int>(recv_buffer.size()));
 
     if (bytes_read > 0) {
         std::array<uint8_t, 1024> combined_buffer;
-        memcpy(combined_buffer.data(), data_save_buffer_.data(), data_save_len_);
-        memcpy(combined_buffer.data() + data_save_len_, recv_buffer.data(), bytes_read);
+        memcpy(combined_buffer.data(), data_save_buffer_.data(), static_cast<size_t>(data_save_len_));
+        memcpy(combined_buffer.data() + data_save_len_, recv_buffer.data(), static_cast<size_t>(bytes_read));
         extract_packets(combined_buffer.data(), data_save_len_ + bytes_read);
     }
 }
@@ -213,7 +213,7 @@ void MotorController::extract_packets(const uint8_t* data, int length) {
 
     data_save_len_ = length - remainder_pos;
     if (data_save_len_ > 0) {
-        memcpy(data_save_buffer_.data(), &data[remainder_pos], data_save_len_);
+        memcpy(data_save_buffer_.data(), &data[remainder_pos], static_cast<size_t>(data_save_len_));
     }
 }
 
@@ -221,27 +221,27 @@ void MotorController::extract_packets(const uint8_t* data, int length) {
 void MotorController::process_packet(const std::array<uint8_t, 8>& data, uint32_t can_id, uint8_t cmd) {
     if (cmd == 0x11) { // Motor status feedback
          if (can_id != 0x00) {
-            Motor* motor = find_motor_by_slave_id(can_id);
+            Motor* motor = find_motor_by_slave_id(static_cast<uint16_t>(can_id));
             if (motor) {
-                uint16_t q_uint = (static_cast<uint16_t>(data[1]) << 8) | data[2];
-                uint16_t dq_uint = (static_cast<uint16_t>(data[3]) << 4) | (data[4] >> 4);
-                uint16_t tau_uint = (static_cast<uint16_t>(data[4] & 0xf) << 8) | data[5];
+                uint16_t q_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[1]) << 8) | data[2]);
+                uint16_t dq_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[3]) << 4) | (data[4] >> 4));
+                uint16_t tau_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[4] & 0xf) << 8) | data[5]);
 
-                const MotorLimits& limits = LIMIT_PARAM[static_cast<int>(motor->get_motor_type())];
+                const MotorLimits& limits = LIMIT_PARAM[static_cast<size_t>(motor->get_motor_type())];
                 float recv_q = uint_to_float(q_uint, -limits.p_max, limits.p_max, 16);
                 float recv_dq = uint_to_float(dq_uint, -limits.v_max, limits.v_max, 12);
                 float recv_tau = uint_to_float(tau_uint, -limits.t_max, limits.t_max, 12);
                 motor->recv_data(recv_q, recv_dq, recv_tau);
             }
         } else {
-            uint16_t master_id = data[0] & 0x0f;
+            uint16_t master_id = static_cast<uint16_t>(data[0] & 0x0f);
             Motor* motor = find_motor_by_master_id(master_id);
             if (motor) {
-                uint16_t q_uint = (static_cast<uint16_t>(data[1]) << 8) | data[2];
-                uint16_t dq_uint = (static_cast<uint16_t>(data[3]) << 4) | (data[4] >> 4);
-                uint16_t tau_uint = (static_cast<uint16_t>(data[4] & 0xf) << 8) | data[5];
+                uint16_t q_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[1]) << 8) | data[2]);
+                uint16_t dq_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[3]) << 4) | (data[4] >> 4));
+                uint16_t tau_uint = static_cast<uint16_t>((static_cast<uint16_t>(data[4] & 0xf) << 8) | data[5]);
 
-                const MotorLimits& limits = LIMIT_PARAM[static_cast<int>(motor->get_motor_type())];
+                const MotorLimits& limits = LIMIT_PARAM[static_cast<size_t>(motor->get_motor_type())];
                 float recv_q = uint_to_float(q_uint, -limits.p_max, limits.p_max, 16);
                 float recv_dq = uint_to_float(dq_uint, -limits.v_max, limits.v_max, 12);
                 float recv_tau = uint_to_float(tau_uint, -limits.t_max, limits.t_max, 12);
@@ -256,8 +256,8 @@ void MotorController::process_packet(const std::array<uint8_t, 8>& data, uint32_
 
 void MotorController::process_set_param_packet(const std::array<uint8_t, 8>& data, uint32_t can_id, uint8_t cmd) {
     if (cmd == 0x11 && (data[2] == 0x33 || data[2] == 0x55)) {
-        uint16_t master_id = can_id;
-        uint16_t slave_id = (static_cast<uint16_t>(data[1]) << 8) | data[0];
+        uint16_t master_id = static_cast<uint16_t>(can_id);
+        uint16_t slave_id = static_cast<uint16_t>((static_cast<uint16_t>(data[1]) << 8) | data[0]);
 
         Motor* motor = find_motor_by_master_id(master_id);
         if (!motor) {
@@ -366,7 +366,7 @@ bool MotorController::change_motor_param(Motor* motor, DMVariable rid, float dat
         recv_set_param_data();
         if (motor->has_param(rid)) {
             // Using a small epsilon for float comparison
-            if (abs(motor->get_param(rid) - data) < 0.001f) {
+            if (std::abs(motor->get_param(rid) - data) < 0.001f) {
                 return true;
             } else {
                 return false;
