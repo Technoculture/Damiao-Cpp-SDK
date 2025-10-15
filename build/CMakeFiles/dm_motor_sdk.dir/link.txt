@@ -1,2 +1,0 @@
-/usr/bin/ar qc libdm_motor_sdk.a CMakeFiles/dm_motor_sdk.dir/src/serial_device.cpp.o CMakeFiles/dm_motor_sdk.dir/src/motor.cpp.o CMakeFiles/dm_motor_sdk.dir/src/motor_controller.cpp.o CMakeFiles/dm_motor_sdk.dir/src/protocol_utils.cpp.o
-/usr/bin/ranlib libdm_motor_sdk.a
