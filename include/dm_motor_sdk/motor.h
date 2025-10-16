@@ -2,6 +2,7 @@
 #define DM_MOTOR_SDK_MOTOR_H
 
 #include "motor_types.h"
+#include <array>
 
 namespace dm_motor_sdk {
 
@@ -17,8 +18,6 @@ public:
     float get_velocity() const;
     float get_torque() const;
 
-    // Using a C-style array for parameters as per style guide
-    // A simple approach to mimic the dictionary behavior for a fixed set of keys.
     void set_param(DMVariable rid, float value);
     float get_param(DMVariable rid) const;
     bool has_param(DMVariable rid) const;
@@ -28,16 +27,15 @@ public:
     uint16_t get_master_id() const;
 
 private:
-    float state_q_;
-    float state_dq_;
-    float state_tau_;
-    uint16_t slave_id_;
-    uint16_t master_id_;
-    DMMotorType motor_type_;
+    float state_q;
+    float state_dq;
+    float state_tau;
+    uint16_t slave_id;
+    uint16_t master_id;
+    DMMotorType motor_type;
 
-    // Fixed-size array to store parameters, indexed by DMVariable enum
-    float params_[MAX_PARAMS];
-    bool params_set_[MAX_PARAMS];
+    std::array<float, MAX_PARAMS> params;
+    std::array<bool, MAX_PARAMS> params_set;
 };
 
 } // namespace dm_motor_sdk

@@ -12,50 +12,50 @@
 
 namespace dm_motor_sdk {
 
-SerialDevice::SerialDevice(const char* port_name, int baud_rate) {
-    port_name_ = port_name;
-    baud_rate_ = baud_rate;
-    is_open_ = false;
+SerialDevice::SerialDevice(const char* new_port_name, int new_baud_rate) {
+    this->port_name = new_port_name;
+    this->baud_rate = new_baud_rate;
+    this->is_device_open = false;
 #ifdef _WIN32
-    handle_ = INVALID_HANDLE_VALUE;
+    this->handle = INVALID_HANDLE_VALUE;
 #else
-    file_descriptor_ = -1;
+    this->file_descriptor = -1;
 #endif
 }
 
 SerialDevice::~SerialDevice() {
-    if (is_open_) {
+    if (is_device_open) {
         close_device();
     }
 }
 
 bool SerialDevice::is_open() const {
-    return is_open_;
+    return is_device_open;
 }
 
 #ifdef _WIN32
 // Windows Implementation
-SerialErrorCode SerialDevice::open_device() {
-    handle_ = CreateFileA(port_name_, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-    if (handle_ == INVALID_HANDLE_VALUE) {
-        return SerialErrorCode::OPEN_FAILED;
+ErrorCode SerialDevice::open_device() {
+    handle = CreateFileA(port_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return ErrorCode::OPEN_FAILED;
     }
 
     DCB dcbSerialParams = {0};
     dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-    if (!GetCommState(handle_, &dcbSerialParams)) {
-        CloseHandle(handle_);
-        return SerialErrorCode::CONFIG_FAILED;
+    if (!GetCommState(handle, &dcbSerialParams)) {
+        CloseHandle(handle);
+        return ErrorCode::CONFIG_FAILED;
     }
 
-    dcbSerialParams.BaudRate = baud_rate_;
+    dcbSerialParams.BaudRate = baud_rate;
     dcbSerialParams.ByteSize = 8;
     dcbSerialParams.StopBits = ONESTOPBIT;
     dcbSerialParams.Parity = NOPARITY;
 
-    if (!SetCommState(handle_, &dcbSerialParams)) {
-        CloseHandle(handle_);
-        return SerialErrorCode::CONFIG_FAILED;
+    if (!SetCommState(handle, &dcbSerialParams)) {
+        CloseHandle(handle);
+        return ErrorCode::CONFIG_FAILED;
     }
 
     COMMTIMEOUTS timeouts = {0};
@@ -65,40 +65,40 @@ SerialErrorCode SerialDevice::open_device() {
     timeouts.WriteTotalTimeoutConstant = 50;
     timeouts.WriteTotalTimeoutMultiplier = 10;
 
-    if (!SetCommTimeouts(handle_, &timeouts)) {
-        CloseHandle(handle_);
-        return SerialErrorCode::CONFIG_FAILED;
+    if (!SetCommTimeouts(handle, &timeouts)) {
+        CloseHandle(handle);
+        return ErrorCode::CONFIG_FAILED;
     }
 
-    is_open_ = true;
-    return SerialErrorCode::SUCCESS;
+    is_device_open = true;
+    return ErrorCode::SUCCESS;
 }
 
 void SerialDevice::close_device() {
-    if (is_open_ && handle_ != INVALID_HANDLE_VALUE) {
-        CloseHandle(handle_);
-        handle_ = INVALID_HANDLE_VALUE;
-        is_open_ = false;
+    if (is_device_open && handle != INVALID_HANDLE_VALUE) {
+        CloseHandle(handle);
+        handle = INVALID_HANDLE_VALUE;
+        is_device_open = false;
     }
 }
 
 int SerialDevice::read_data(uint8_t* buffer, int buffer_size) {
-    if (!is_open_ || handle_ == INVALID_HANDLE_VALUE) {
+    if (!is_device_open || handle == INVALID_HANDLE_VALUE) {
         return -1;
     }
     DWORD bytes_read = 0;
-    if (!ReadFile(handle_, buffer, buffer_size, &bytes_read, NULL)) {
+    if (!ReadFile(handle, buffer, buffer_size, &bytes_read, NULL)) {
         return -1;
     }
     return bytes_read;
 }
 
 int SerialDevice::write_data(const uint8_t* data, int length) {
-    if (!is_open_ || handle_ == INVALID_HANDLE_VALUE) {
+    if (!is_device_open || handle == INVALID_HANDLE_VALUE) {
         return -1;
     }
     DWORD bytes_written = 0;
-    if (!WriteFile(handle_, data, length, &bytes_written, NULL)) {
+    if (!WriteFile(handle, data, length, &bytes_written, NULL)) {
         return -1;
     }
     return bytes_written;
@@ -106,17 +106,17 @@ int SerialDevice::write_data(const uint8_t* data, int length) {
 
 #else
 // Linux/macOS Implementation
-SerialErrorCode SerialDevice::open_device() {
-    file_descriptor_ = open(port_name_, O_RDWR | O_NOCTTY | O_NDELAY);
-    if (file_descriptor_ == -1) {
-        return SerialErrorCode::OPEN_FAILED;
+ErrorCode SerialDevice::open_device() {
+    file_descriptor = open(port_name, O_RDWR | O_NOCTTY | O_NDELAY);
+    if (file_descriptor == -1) {
+        return ErrorCode::OPEN_FAILED;
     }
 
     struct termios options;
-    tcgetattr(file_descriptor_, &options);
+    tcgetattr(file_descriptor, &options);
 
-    cfsetispeed(&options, static_cast<speed_t>(baud_rate_));
-    cfsetospeed(&options, static_cast<speed_t>(baud_rate_));
+    cfsetispeed(&options, static_cast<speed_t>(baud_rate));
+    cfsetospeed(&options, static_cast<speed_t>(baud_rate));
 
     options.c_cflag |= (CLOCAL | CREAD);
     options.c_cflag &= ~static_cast<tcflag_t>(PARENB);
@@ -129,36 +129,36 @@ SerialErrorCode SerialDevice::open_device() {
     options.c_cc[VMIN] = 0;
     options.c_cc[VTIME] = 10; // 1 second timeout
 
-    if (tcsetattr(file_descriptor_, TCSANOW, &options) != 0) {
-        close(file_descriptor_);
-        return SerialErrorCode::CONFIG_FAILED;
+    if (tcsetattr(file_descriptor, TCSANOW, &options) != 0) {
+        close(file_descriptor);
+        return ErrorCode::CONFIG_FAILED;
     }
 
-    is_open_ = true;
-    return SerialErrorCode::SUCCESS;
+    is_device_open = true;
+    return ErrorCode::SUCCESS;
 }
 
 void SerialDevice::close_device() {
-    if (is_open_ && file_descriptor_ != -1) {
-        close(file_descriptor_);
-        file_descriptor_ = -1;
-        is_open_ = false;
+    if (is_device_open && file_descriptor != -1) {
+        close(file_descriptor);
+        file_descriptor = -1;
+        is_device_open = false;
     }
 }
 
 int SerialDevice::read_data(uint8_t* buffer, int buffer_size) {
-    if (!is_open_ || file_descriptor_ == -1) {
+    if (!is_device_open || file_descriptor == -1) {
         return -1;
     }
-    ssize_t bytes_read = read(file_descriptor_, buffer, static_cast<size_t>(buffer_size));
+    ssize_t bytes_read = read(file_descriptor, buffer, static_cast<size_t>(buffer_size));
     return static_cast<int>(bytes_read);
 }
 
 int SerialDevice::write_data(const uint8_t* data, int length) {
-    if (!is_open_ || file_descriptor_ == -1) {
+    if (!is_device_open || file_descriptor == -1) {
         return -1;
     }
-    ssize_t bytes_written = write(file_descriptor_, data, static_cast<size_t>(length));
+    ssize_t bytes_written = write(file_descriptor, data, static_cast<size_t>(length));
     return static_cast<int>(bytes_written);
 }
 
